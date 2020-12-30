@@ -1,0 +1,62 @@
+---
+- name: Build server provisioning
+  hosts: build
+  become: yes
+  tasks:
+  - name: Openjdk package is present
+    apt:
+     name: openjdk-11-jdk
+     state: present
+
+  - name: Git package is present
+    apt:
+     name: git
+     state: present
+
+  - name: Maven package is present
+    apt:
+     name: maven
+     state: present
+
+  - name: Git clon is present
+    git:
+     repo: 'https://github.com/koddas/war-web-project.git'
+     dest: /root/war-web-project
+
+  - name: Maven run
+    shell: cd /root/war-web-project && mvn package -f /root/war-web-project/pom.xml
+
+  - name: Copy artifact to server
+    fetch:
+     src: /root/war-web-project/target/wwp-1.0.0.war
+     dest: /tmp/
+     flat: yes
+
+- name: Prod server provisioning
+  hosts: prod
+  become: yes
+  tasks:
+  - name: Openjdk package is present
+    apt:
+     name: openjdk-11-jdk
+     state: present
+
+  - name: Tomcat package is present
+    apt:
+     name: tomcat8
+     state: present
+     
+  - name: Update all packages 
+    apt:
+     upgrade: dist
+  
+  - name: Copy artifact to prod 
+    copy:
+     src: /tmp/wwp-1.0.0.war
+     dest: /var/lib/tomcat8/webapps
+
+  - name: Tomcat startup
+    service:
+     name: tomcat8
+     state: restarted
+
